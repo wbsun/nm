@@ -797,7 +797,7 @@ quit:
 static void
 tx_output(uint64_t sent, int size, double delta)
 {
-	double amount = 8.0 * (1.0 * size * sent) / delta;
+	double amount = 8.0 * (1.0 * (size+24) * sent) / delta;
 	double pps = sent / delta;
 	char units[4] = { '\0', 'K', 'M', 'G' };
 	int aunit = 0, punit = 0;
