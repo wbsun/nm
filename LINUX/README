@@ -1,37 +1,3 @@
-# $Id: README 10863 2012-04-11 17:10:39Z luigi $
-
-NETMAP FOR LINUX
-----------------
-
-This directory contains a version of the "netmap" and "VALE" code for Linux.
-
-Netmap is a BSD-licensed framework that supports line-rate direct packet
-I/O even on 10GBit/s interfaces (14.88Mpps) with limited system load,
-and includes a libpcap emulation library to port applications.
-
-See
-
-	http://info.iet.unipi.it/~luigi/netmap/
-
-for more details. There you can also find the latest versions
-of the code and documentation as well as pre-built TinyCore
-images based on linux 3.0.3 and containing the netmap modules
-and some test applications.
-
-This version supports r8169, ixgbe, igb, e1000, e1000e and forcedeth.
-
-Netmap relies on a kernel module (netmap_lin.ko) and slightly modified
-device drivers. Userspace programs can use the native API (documented
-in netmap.4) or a libpcap emulation library.
-
-The FreeBSD and Linux versions share the same codebase, which
-is located in ../sys . For Linux we use some additional glue code,
-(bsd_glue.h).
-
-Device drivers are taken directly from the Linux distributions,
-and patched using the files in the patches/ directory.
-Common driver modifications are in the .h files in this directory.
-
 
 HOW TO BUILD THE CODE
 ---------------------
@@ -46,22 +12,9 @@ HOW TO BUILD THE CODE
 	(cd ../examples; make )
    (you will need the pthreads and libpcap-dev packages to build them)
 
-If you want support for additional drivers please have a look at
-ixgbe_netmap_linux.h and the patches in patches/
-The patch file are named as diff--DRIVER--LOW--HIGH--otherstuff
-where DRIVER is the driver name to patch, LOW and HIGH are the
-versions to which the patch applies (LOW included, HIGH excluded, so
-diff--r8169.c--20638--30300--ok applies from 2.6.38 to 3.3.0 (excluded)
-
+   
 HOW TO USE THE CODE
 -------------------
-
-    REMEMBER
-	THIS IS EXPERIMENTAL CODE WHICH MAY CRASH YOUR SYSTEM.
-	USE IT AT YOUR OWN RISk.
-
-Whether you built your own modules, or are using the prebuilt
-TinyCore image, the following steps can be used for initial testing:
 
 1. unload any modules for the network cards you want to use, e.g.
 	sudo rmmod ixgbe
@@ -120,19 +73,3 @@ COMMON PROBLEMS
   remote party is senting flow control frames to slow down traffic.
   If that happens try to use the ethtool command to disable flow control.
 
-
-REVISION HISTORY
------------------
-
-20120813 - updated distribution using common code for FreeBSD and Linux,
-	and inclusion of drivers from the linux source tree
-
-20120322 - fixed the 'igb' driver, now it can send and receive correctly
-	(the problem was in netmap_rx_irq() so it might have affected
-	other multiqueue cards).
-	Also tested the 'r8169' in transmit mode.
-	Added comments on switches and spanning tree.
-
-20120217 - initial version. Only ixgbe, e1000 and e1000e are working.
-	Other drivers (igb, r8169, forcedeth) are supplied only as a
-	proof of concept.
