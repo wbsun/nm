@@ -1,6 +1,5 @@
 CONFIG_NETMAP:=m
 CONFIG_IXGBE:=m
-CONFIG_IGB:=m
 
 netmap_lin-objs := netmap.o
 
@@ -11,7 +10,7 @@ obj-$(CONFIG_IXGBE) += ixgbe/
 # names of the driver sources. In old linuxes are under
 # KSRC/drivers/net, but depending on where you build they
 # can be in $(KSRC)/source/drivers/net/ethernet/$(manufacturer)
-DRIVER_SRCS =  ixgbe/ igb/
+DRIVER_SRCS =  ixgbe/
 DRIVER_SUBDIRS= intel
 
 # The following commands are needed to build the modules as out-of-tree, in
@@ -36,8 +35,8 @@ all:	build
 
 build:
 	make -C $(KSRC) M=$(PWD) CONFIG_NETMAP=m	\
-		CONFIG_IXGBE=m CONFIG_IGB=m EXTRA_CFLAGS='$(EXTRA_CFLAGS)' \
-		DRIVERS="ixgb/ ixgbe/" modules
+		CONFIG_IXGBE=m EXTRA_CFLAGS='$(EXTRA_CFLAGS)' \
+		DRIVERS="ixgbe/" modules
 	@ls -l `find . -name \*.ko`
 
 clean:
