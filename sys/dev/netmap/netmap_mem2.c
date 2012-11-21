@@ -90,7 +90,7 @@
  * a few hundreds of them.
  */
 #define NETMAP_RING_MAX_SIZE    (9*PAGE_SIZE)
-#define NETMAP_RING_MAX_NUM     1000	/* approx 8MB (200)*/
+#define NETMAP_RING_MAX_NUM     800	/* approx 8MB (200)*/
 
 /*
  * Buffers: the more the better. Buffer size is NETMAP_BUF_SIZE,
