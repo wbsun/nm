@@ -99,10 +99,17 @@
  * or about 72MB of memory. Up to us to use more.
  */
 #ifndef CONSERVATIVE
-#define NETMAP_BUF_MAX_NUM      256000  /* 200MB (10000)*/
+#define NETMAP_BUF_MAX_NUM      1024000  /* 200MB (10000)*/
 #else /* CONSERVATIVE */
 #define NETMAP_BUF_MAX_NUM      200000   /* 40MB (20000)*/
 #endif
+
+/*
+ * Unstable workaround for kmalloc limit.
+ */
+#include <linux/vmalloc.h>
+#define G4C_KMALLOC_LIMIT (1<<22)
+#define G4C_LUT_OBJ_LIMIT ((G4C_KMALLOC_LIMIT)/sizeof(struct lut_entry))
 
 
 struct netmap_obj_pool {
@@ -361,7 +368,10 @@ netmap_destroy_obj_allocator(struct netmap_obj_pool *p)
 				contigfree(p->lut[i].vaddr, p->_clustsize, M_NETMAP);
 		}
 		bzero(p->lut, sizeof(struct lut_entry) * p->objtotal);
-		free(p->lut, M_NETMAP);
+                if (p->objtotal <= G4C_LUT_OBJ_LIMIT)
+                    free(p->lut, M_NETMAP);
+                else
+                    vfree(p->lut);
 	}
 	bzero(p, sizeof(*p));
 	free(p, M_NETMAP);
@@ -448,9 +458,12 @@ netmap_new_obj_allocator(const char *name, u_int objtotal, u_int objsize)
 	p->_objsize = objsize;
 	p->_memtotal = p->_numclusters * p->_clustsize;
 
-	p->lut = malloc(sizeof(struct lut_entry) * p->objtotal,
-	    M_NETMAP, M_WAITOK | M_ZERO);
-	if (p->lut == NULL) {
+        if (p->objtotal <= G4C_LUT_OBJ_LIMIT)
+            p->lut = malloc(sizeof(struct lut_entry) * p->objtotal,
+                            M_NETMAP, M_WAITOK | M_ZERO);
+        else
+            p->lut = vmalloc(sizeof(struct lut_entry) * p->objtotal);
+        if (p->lut == NULL) {
 		D("Unable to create lookup table for '%s' allocator", name);
 		goto clean;
 	}
