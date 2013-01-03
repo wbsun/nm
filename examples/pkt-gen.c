@@ -415,7 +415,7 @@ send_packets(struct netmap_ring *ring, struct pkt *pkt,
 		char *p = NETMAP_BUF(ring, slot->buf_idx);
 
 		if (options & OPT_COPY)
-			pkt_copy(pkt, p, size);
+		    ;//pkt_copy(pkt, p, size);
 		else if (options & OPT_MEMCPY)
 			memcpy(p, pkt, size);
 		else if (options & OPT_PREFETCH)
