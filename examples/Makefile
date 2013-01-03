@@ -7,7 +7,7 @@ PROGS	+= testlock testcsum test_select
 CLEANFILES = $(PROGS) pcap.o nm_util.o *.o
 NO_MAN=
 CFLAGS = -O3 -pipe
-CFLAGS += -Werror -Wall
+CFLAGS += -Wall
 CFLAGS += -I ../sys # -I/home/luigi/FreeBSD/head/sys -I../sys
 CFLAGS += -Wextra
 
