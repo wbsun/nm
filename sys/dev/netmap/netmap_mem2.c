@@ -338,6 +338,22 @@ cleanup:
 	}
 }
 
+static int
+nm_alloc_buffer()
+{
+    void *va = netmap_buf_malloc();
+    if (!va)
+	return -1;
+    else
+	return netmap_buf_index(va);
+}
+
+static void
+nm_free_buffer(uint32_t bidx)
+{
+    netmap_obj_free(nm_mem->nm_buf_pool, bidx);
+}
+
 
 static void
 netmap_free_buf(struct netmap_if *nifp, uint32_t i)
