@@ -51,3 +51,9 @@ $(obj)/netmap.o: $(M)/../sys/dev/netmap/netmap.c
 
 apps:
 	(cd ../examples; make)
+
+install:
+	cp ../sys/net/*.h /usr/include/net/
+
+uninstall:
+	rm -f /usr/include/net/netmap*.h
