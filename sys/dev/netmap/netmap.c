@@ -1609,7 +1609,8 @@ linux_netmap_start(struct sk_buff *skb, struct net_device *dev)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,37)	// XXX was 38
 #define LIN_IOCTL_NAME	.ioctl
 int
-linux_netmap_ioctl(struct inode *inode, struct file *file, u_int cmd, u_long data /* arg */)
+linux_netmap_ioctl(struct inode *inode, struct file *file, u_int cmd,
+                   u_long data /* arg */)
 #else
 #define LIN_IOCTL_NAME	.unlocked_ioctl
 long
@@ -1618,6 +1619,71 @@ linux_netmap_ioctl(struct file *file, u_int cmd, u_long data /* arg */)
 {
 	int ret;
 	struct nmreq nmr;
+        int *idx;
+	int i;
+	
+        /*
+         * These can be in netmap_ioctl, but just put them here to
+         * save my time.
+         */
+        switch(cmd) {
+        case NIOCALLOCBUF:
+	    ret = 0;
+	    idx = (int*)kmalloc(
+		sizeof(int)*NETMAP_IOC_EXBUF_ARR_SZ, GFP_KERNEL);
+	    if (!idx) {
+		ret = ENOMEM;
+		goto get_out_ioc;
+	    }
+
+	    for (i=0; i<NETMAP_IOC_EXBUF_ARR_SZ; i++) {
+		idx[i] = nm_alloc_buffer();
+		if (idx[i] < 0) {
+		    ret = ENOMEM;
+		    kfree(idx);
+		    goto get_out_ioc;
+		}
+	    }
+	
+	    if (data && copy_to_user(
+		    (void*)data, idx,
+		    sizeof(int)*NETMAP_IOC_EXBUF_ARR_SZ) !=0)
+		ret = EFAULT;
+	    kfree(idx);
+            goto get_out_ioc;
+            break; /* no need? */
+	    
+        case NIOCFREEBUF:
+	    ret = 0;
+	    idx = (int*)kmalloc(
+		sizeof(int)*NETMAP_IOC_EXBUF_ARR_SZ, GFP_KERNEL);
+	    if (!idx) {
+		ret = ENOMEM;
+		goto get_out_ioc;
+	    }
+
+	    if (data && copy_from_user(
+                    idx, (void*)data,
+		    sizeof(int)*NETMAP_IOC_EXBUF_ARR_SZ) != 0) {
+                ret = EFAULT;
+		kfree(idx);
+		goto get_out_ioc;
+	    }
+
+	    for (i=0; i<NETMAP_IOC_EXBUF_ARR_SZ; i++) {
+		if (idx[i] < 0 || idx[i] >= nm_mem->nm_buf_pool->objtotal)
+		    ret = EINVAL;
+		else
+		    nm_free_buffer((uint32_t)idx[i]);
+	    }
+
+	    kfree(idx);
+	    goto get_out_ioc;
+            break;
+        default:
+            break;
+        }
+        
 	bzero(&nmr, sizeof(nmr));
 
 	if (data && copy_from_user(&nmr, (void *)data, sizeof(nmr) ) != 0)
@@ -1625,6 +1691,7 @@ linux_netmap_ioctl(struct file *file, u_int cmd, u_long data /* arg */)
 	ret = netmap_ioctl(NULL, cmd, (caddr_t)&nmr, 0, (void *)file);
 	if (data && copy_to_user((void*)data, &nmr, sizeof(nmr) ) != 0)
 		return -EFAULT;
+get_out_ioc:
 	return -ret;
 }
 
