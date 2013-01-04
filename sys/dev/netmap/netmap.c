@@ -1619,36 +1619,66 @@ linux_netmap_ioctl(struct file *file, u_int cmd, u_long data /* arg */)
 {
 	int ret;
 	struct nmreq nmr;
-        int idx;
-
+        int *idx;
+	int i;
+	
         /*
          * These can be in netmap_ioctl, but just put them here to
          * save my time.
          */
         switch(cmd) {
         case NIOCALLOCBUF:
-            ret = 0;
-            idx = nm_alloc_buffer();
-            if (idx < 0)
-                ret = ENOMEM;
-            else
-                if (data && copy_to_user(
-                        (void*)data, &idx, sizeof(int)) !=0)
-                    ret = EFAULT;
+	    ret = 0;
+	    idx = (int*)kmalloc(
+		sizeof(int)*NETMAP_IOC_EXBUF_ARR_SZ, GFP_KERNEL);
+	    if (!idx) {
+		ret = ENOMEM;
+		goto get_out_ioc;
+	    }
+
+	    for (i=0; i<NETMAP_IOC_EXBUF_ARR_SZ; i++) {
+		idx[i] = nm_alloc_buffer();
+		if (idx[i] < 0) {
+		    ret = ENOMEM;
+		    kfree(idx);
+		    goto get_out_ioc;
+		}
+	    }
+	
+	    if (data && copy_to_user(
+		    (void*)data, idx,
+		    sizeof(int)*NETMAP_IOC_EXBUF_ARR_SZ) !=0)
+		ret = EFAULT;
+	    kfree(idx);
             goto get_out_ioc;
             break; /* no need? */
+	    
         case NIOCFREEBUF:
-            ret = 0;
-            if (data && copy_from_user(
-                    &idx, (void*)data, sizeof(int)) != 0)
+	    ret = 0;
+	    idx = (int*)kmalloc(
+		sizeof(int)*NETMAP_IOC_EXBUF_ARR_SZ, GFP_KERNEL);
+	    if (!idx) {
+		ret = ENOMEM;
+		goto get_out_ioc;
+	    }
+
+	    if (data && copy_from_user(
+                    idx, (void*)data,
+		    sizeof(int)*NETMAP_IOC_EXBUF_ARR_SZ) != 0) {
                 ret = EFAULT;
-            else {
-                if (idx < 0 || idx >= nm_mem->nm_buf_pool->objtotal)
-                    ret = EINVAL;
-                else
-                    nm_free_buffer((uint32_t)idx);
-            }
-            goto get_out_ioc;
+		kfree(idx);
+		goto get_out_ioc;
+	    }
+
+	    for (i=0; i<NETMAP_IOC_EXBUF_ARR_SZ; i++) {
+		if (idx[i] < 0 || idx[i] >= nm_mem->nm_buf_pool->objtotal)
+		    ret = EINVAL;
+		else
+		    nm_free_buffer((uint32_t)idx[i]);
+	    }
+
+	    kfree(idx);
+	    goto get_out_ioc;
             break;
         default:
             break;

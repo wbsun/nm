@@ -277,15 +277,18 @@ struct nmreq {
  * FreeBSD uses the size value embedded in the _IOWR to determine
  * how much to copy in/out. So we need it to match the actual
  * data structure we pass. We put some spares in the structure
- * to ease compatibility with other versions
+ * to ease compatibility with other version.
  */
+
+#define NETMAP_IOC_EXBUF_ARR_SZ 1024
+
 #define NIOCGINFO	_IOWR('i', 145, struct nmreq) /* return IF info */
 #define NIOCREGIF	_IOWR('i', 146, struct nmreq) /* interface register */
 #define NIOCUNREGIF	_IO('i', 147) /* interface unregister */
 #define NIOCTXSYNC	_IO('i', 148) /* sync tx queues */
 #define NIOCRXSYNC	_IO('i', 149) /* sync rx queues */
-#define NIOCALLOCBUF    _IOR('i', 150, int) /* alloc extra buffer idx */
-#define NIOCFREEBUF     _IOW('i', 151, int) /* free extra buffer idx */
+#define NIOCALLOCBUF    _IOR('i', 150, int[NETMAP_IOC_EXBUF_ARR_SZ]) /* alloc extra buffer idx */
+#define NIOCFREEBUF     _IOW('i', 151, int[NETMAP_IOC_EXBUF_ARR_SZ]) /* free extra buffer idx */
 #endif /* !NIOCREGIF */
 
 #endif /* _NET_NETMAP_H_ */
