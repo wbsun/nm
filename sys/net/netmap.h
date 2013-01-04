@@ -284,6 +284,8 @@ struct nmreq {
 #define NIOCUNREGIF	_IO('i', 147) /* interface unregister */
 #define NIOCTXSYNC	_IO('i', 148) /* sync tx queues */
 #define NIOCRXSYNC	_IO('i', 149) /* sync rx queues */
+#define NIOCALLOCBUF    _IOR('i', 150, int) /* alloc extra buffer idx */
+#define NIOCFREEBUF     _IOW('i', 151, int) /* free extra buffer idx */
 #endif /* !NIOCREGIF */
 
 #endif /* _NET_NETMAP_H_ */
