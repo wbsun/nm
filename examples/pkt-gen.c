@@ -749,10 +749,13 @@ sender_body(void *data)
 	    /*
 	     * wait for available room in the send queue(s)
 	     */
-	    if (poll(fds, 1, 2000) <= 0) {
-		D("poll error/timeout on queue %d", targ->me);
-		goto quit;
-	    }
+	    do {
+		i = poll(fds, 1, 2000);
+		if (i < 0) {		    
+		    D("poll error/timeout on queue %d", targ->me);
+		    goto quit;
+		}
+	    } while (i==0);
 	    /*
 	     * scan our queues and send on those with room
 	     */
@@ -867,11 +870,14 @@ receiver_body(void *data)
 	while (1) {
 	    /* Once we started to receive packets, wait at most 1 seconds
 	       before quitting. */
-	    if (poll(fds, 1, 1 * 1000) <= 0) {
-		gettimeofday(&targ->toc, NULL);
-		targ->toc.tv_sec -= 1; /* Subtract timeout time. */
-		break;
-	    }
+	    do {
+		i = poll(fds, 1, 1 * 1000);
+		if (i < 0) {
+		    gettimeofday(&targ->toc, NULL);
+		    targ->toc.tv_sec -= 1; /* Subtract timeout time. */
+		    goto rx_out;
+		}
+	    } while (i==0);
 
 	    for (i = targ->qfirst; i < targ->qlast; i++) {
 		int m;
@@ -891,6 +897,7 @@ receiver_body(void *data)
 	}
     }
 
+rx_out:
     targ->completed = 1;
     targ->count = received;
 
