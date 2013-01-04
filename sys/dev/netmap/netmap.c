@@ -1643,7 +1643,7 @@ linux_netmap_ioctl(struct file *file, u_int cmd, u_long data /* arg */)
                     &idx, (void*)data, sizeof(int)) != 0)
                 ret = EFAULT;
             else {
-                if (idx < 0 || idx >= nm_mem->nm_buf_poll->objtotal)
+                if (idx < 0 || idx >= nm_mem->nm_buf_pool->objtotal)
                     ret = EINVAL;
                 else
                     nm_free_buffer((uint32_t)idx);
