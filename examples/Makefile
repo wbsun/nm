@@ -1,6 +1,6 @@
 # For multiple programs using a single source file each,
 # we can just define 'progs' and create custom targets.
-PROGS	=	pkt-gen bridge testpcap libnetmap.so
+PROGS	=	pkt-gen bridge testpcap libnetmap.so pg
 #PROGS += pingd
 PROGS	+= testlock testcsum test_select
 
@@ -29,6 +29,9 @@ nm_util.o pkt-gen.o bridge.o libnetmap.so pcap.o: nm_util.h
 
 pkt-gen: pkt-gen.o nm_util.o
 	$(CC) $(CFLAGS) -o pkt-gen pkt-gen.o nm_util.o $(LDFLAGS)
+
+pg: pg.o nm_util.o
+	$(CC) $(CFLAGS) -o pg pg.o nm_util.o $(LDFLAGS)
 
 bridge: bridge.o nm_util.o
 
