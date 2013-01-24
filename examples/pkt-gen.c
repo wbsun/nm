@@ -1,10 +1,13 @@
 const char *default_payload="netmap pkt-gen Luigi Rizzo and Matteo Landi\n"
     "http://info.iet.unipi.it/~luigi/netmap/ ";
 
+#define _GNU_SOURCE
 #include "nm_util.h"
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <fcntl.h>
+#include <sched.h>
 
 int verbose = 0;
 
@@ -181,7 +184,7 @@ system_ncpus(void)
 
     return (ncpus);
 #else
-    return 1;
+    return (int)sysconf(_SC_NPROCESSORS_ONLN);
 #endif /* !__FreeBSD__ */
 }
 
@@ -227,14 +230,18 @@ source_hwaddr(const char *ifname, char *buf)
     return ifap ? 0 : 1;
 }
 
-
+#include <sched.h>
+#include <pthread.h>
 /* set the thread affinity. */
 static int
 setaffinity(pthread_t me, int i)
 {
-#ifdef __FreeBSD__
+#ifdef __linux__
+    cpu_set_t cpumask;
+#else
     cpuset_t cpumask;
-
+#endif
+    
     if (i == -1)
 	return 0;
 
@@ -242,14 +249,17 @@ setaffinity(pthread_t me, int i)
     CPU_ZERO(&cpumask);
     CPU_SET(i, &cpumask);
 
-    if (pthread_setaffinity_np(me, sizeof(cpuset_t), &cpumask) != 0) {
+    if (pthread_setaffinity_np(me,
+#ifdef __linux__
+			       sizeof(cpu_set_t),
+#else
+			       sizeof(cpuset_t),
+#endif
+			       &cpumask) != 0) {
 	D("Unable to set affinity");
 	return 1;
     }
-#else
-    (void)me; /* suppress 'unused' warnings */
-    (void)i;
-#endif /* __FreeBSD__ */
+
     return 0;
 }
 
@@ -1310,10 +1320,10 @@ main(int arc, char **argv)
 	    (td_body == receiver_body ? tifreq.nr_rx_rings : tifreq.nr_tx_rings);
 	targs[i].me = i;
 	if (affinity >= 0) {
-	    if (affinity < g.cpus)
-		targs[i].affinity = affinity;
+	    if (affinity+i < g.cpus)
+		targs[i].affinity = affinity+i;
 	    else
-		targs[i].affinity = i % g.cpus;
+		targs[i].affinity = (affinity + i) % g.cpus;
 	} else
 	    targs[i].affinity = -1;
 	/* default, init packets */
