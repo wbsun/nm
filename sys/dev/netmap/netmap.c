@@ -1619,7 +1619,8 @@ linux_netmap_ioctl(struct file *file, u_int cmd, u_long data /* arg */)
 {
 	int ret;
 	struct nmreq nmr;
-        int *idx;
+        int *idx = 0;
+	void **vas = 0;
 	int i;
 	
         /*
@@ -1631,19 +1632,34 @@ linux_netmap_ioctl(struct file *file, u_int cmd, u_long data /* arg */)
 	    ret = 0;
 	    idx = (int*)kmalloc(
 		sizeof(int)*NETMAP_IOC_EXBUF_ARR_SZ, GFP_KERNEL);
-	    if (!idx) {
+	    vas = (void**)kmalloc(
+		sizeof(void*)*NETMAP_IOC_EXBUF_ARR_SZ, GFP_KERNEL);
+
+	    if (!idx || !vas) {
 		ret = ENOMEM;
+		if (idx)
+		    kfree(idx);
+		if (vas)
+		    kfree(vas);
 		goto get_out_ioc;
 	    }
 
-	    for (i=0; i<NETMAP_IOC_EXBUF_ARR_SZ; i++) {
-		idx[i] = nm_alloc_buffer();
-		if (idx[i] < 0) {
-		    ret = ENOMEM;
-		    kfree(idx);
-		    goto get_out_ioc;
-		}
+	    if (nm_alloc_buffers(idx, vas, NETMAP_IOC_EXBUF_ARR_SZ))
+	    {
+		ret = ENOMEM;
+		kfree(idx);
+		kfree(vas);
+		goto get_out_ioc;
 	    }
+	    kfree(vas);
+	    /* for (i=0; i<NETMAP_IOC_EXBUF_ARR_SZ; i++) { */
+		/* idx[i] = nm_alloc_buffer(); */
+		/* if (idx[i] < 0) { */
+		    /* ret = ENOMEM; */
+		    /* kfree(idx); */
+		    /* goto get_out_ioc; */
+		/* } */
+	    /* } */
 	
 	    if (data && copy_to_user(
 		    (void*)data, idx,

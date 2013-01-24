@@ -122,6 +122,7 @@ struct netmap_obj_pool {
 	u_int _numclusters;	/* how many clusters */
 	u_int _clustsize;        /* cluster size */
 	u_int _objsize;		/* actual object size */
+        int cur;
 
 	u_int _memtotal;	/* _numclusters*_clustsize */
 	struct lut_entry *lut;  /* virt,phys addresses, objtotal entries */
@@ -251,10 +252,49 @@ netmap_obj_malloc(struct netmap_obj_pool *p, int len)
 		p->objfree--;
 
 		vaddr = p->lut[i * 32 + j].vaddr;
+		p->cur = i;
 	}
 	ND("%s allocator: allocated object @ [%d][%d]: vaddr %p", i, j, vaddr);
 
 	return vaddr;
+}
+
+static int
+netmap_objs_alloc(struct netmap_obj_pool *p, void **vas, int n)
+{
+    uint32_t i = p->cur;			/* index in the bitmap */
+	uint32_t mask, j;		/* slot counter */
+	void *vaddr = NULL;
+	int k=0;
+
+	
+	if (p->objfree <= n) {
+		D("%s allocator: run out of memory", p->name);
+		return 0;
+	}
+
+	/* termination is guaranteed by p->free */
+	while (k<n/*vaddr == NULL*/) {
+		uint32_t cur = p->bitmap[i];
+		if (cur == 0) { /* bitmask is fully used */
+			i++;
+			if (i>= (p->objtotal/32))
+			    i %= (p->objtotal/32);
+			continue;
+		}
+		/* locate a slot */
+		for (j = 0, mask = 1; (cur & mask) == 0; j++, mask <<= 1)
+			;
+
+		p->bitmap[i] &= ~mask; /* mark object as in use */
+		p->objfree--;
+
+		vas[k] = p->lut[i * 32 + j].vaddr;
+		k++;
+	}
+	p->cur = i;
+
+	return n;    
 }
 
 
@@ -336,6 +376,22 @@ cleanup:
 	for (i--; i >= 0; i--) {
 		netmap_obj_free(nm_mem->nm_buf_pool, slot[i].buf_idx);
 	}
+}
+
+static int
+nm_alloc_buffers(int *indicies, void **vas, int n)
+{
+    int i;
+    int r = netmap_objs_alloc(nm_mem->nm_buf_pool, vas, n);
+    if (!r)
+	return -1;
+    else {
+	for (i=0; i<r; i++) {
+	    indicies[i] = netmap_buf_index(vas[i]);
+	}
+    }
+
+    return 0;
 }
 
 static int
@@ -473,6 +529,7 @@ netmap_new_obj_allocator(const char *name, u_int objtotal, u_int objsize)
 	p->objfree = p->objtotal - 2; /* obj 0 and 1 are reserved */
 	p->_objsize = objsize;
 	p->_memtotal = p->_numclusters * p->_clustsize;
+	p->cur = 0;
 
         if (p->objtotal <= G4C_LUT_OBJ_LIMIT)
             p->lut = malloc(sizeof(struct lut_entry) * p->objtotal,
